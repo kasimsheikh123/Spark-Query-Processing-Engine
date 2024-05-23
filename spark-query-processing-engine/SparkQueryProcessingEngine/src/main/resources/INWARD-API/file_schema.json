@@ -1,0 +1,832 @@
+[
+  {
+    "name": "GSTNDT",
+    "format": "csv",
+    "delimiter": "|",
+    "extra_options" : "nullValue=\\N;mode=PERMISSIVE;header=false;multiline=true",
+    "schema": [
+      {
+        "name": "gstin_id",
+        "db_column_name": "gstin_id",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "trade_nam",
+        "db_column_name": "trade_nam",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "cstn_bus_sc",
+        "db_column_name": "cstn_bus_sc",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "floor_num",
+        "db_column_name": "floor_num",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "door_num",
+        "db_column_name": "door_num",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "bldg_nam",
+        "db_column_name": "bldg_nam",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "street_nam",
+        "db_column_name": "street_nam",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "city_nam",
+        "db_column_name": "city_nam",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "district",
+        "db_column_name": "district",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "pin_cd",
+        "db_column_name": "pin_cd",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "numadditionalplace",
+        "db_column_name": "numadditionalplace",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "reg_start_dt",
+        "db_column_name": "reg_start_dt",
+        "dataType": {
+          "value": "date"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "reg_end_dt",
+        "db_column_name": "reg_end_dt",
+        "dataType": {
+          "value": "date"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      }
+    ],
+    "target_table_columns": [
+      "gstin_id",
+      "trade_nam",
+      "cstn_bus_sc",
+      "floor_num",
+      "door_num",
+      "bldg_nam",
+      "street_nam",
+      "city_nam",
+      "district",
+      "pin_cd",
+      "numadditionalplace",
+      "reg_start_dt",
+      "reg_end_dt"
+    ]
+  },
+  {
+    "name": "GSTNMBR",
+    "format": "csv",
+    "delimiter": "|",
+    "extra_options" : "nullValue=\\N;mode=PERMISSIVE;header=false;multiline=true",
+    "schema": [
+      {
+        "name": "gstin_id",
+        "db_column_name": "gstin_id",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "mbr_typ",
+        "db_column_name": "mbr_typ",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "mbr_pan_num",
+        "db_column_name": "mbr_pan_num",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "fst_nam",
+        "db_column_name": "fst_nam",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "mid_nam",
+        "db_column_name": "mid_nam",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "lst_nam",
+        "db_column_name": "lst_nam",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      }
+    ],
+    "target_table_columns": [
+      "gstin_id",
+      "mbr_typ",
+      "mbr_pan_num",
+      "fst_nam",
+      "mid_nam",
+      "lst_nam"
+    ]
+  },
+  {
+    "name": "FILDTLR3B",
+    "format": "csv",
+    "delimiter": "|",
+    "extra_options" : "nullValue=\\N;mode=PERMISSIVE;header=false;multiline=true",
+    "schema": [
+      {
+        "name": "GSTIN",
+        "db_column_name": "GSTIN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "ARN",
+        "db_column_name": "ARN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "FILING_DT",
+        "db_column_name": "FILING_DT",
+        "dataType": {
+          "value": "date"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "RTN_PRD",
+        "db_column_name": "RTN_PRD",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TAXABLE31_A",
+        "db_column_name": "TAXABLE31_A",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TAXABLE31_B",
+        "db_column_name": "TAXABLE31_B",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TAXABLE31_C",
+        "db_column_name": "TAXABLE31_C",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TAXABLE31_E",
+        "db_column_name": "TAXABLE31_E",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TAXABLE_TOVER",
+        "db_column_name": "TAXABLE_TOVER",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_TOVER",
+        "db_column_name": "TOT_TOVER",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "LIAB_TABLE_3",
+        "db_column_name": "LIAB_TABLE_3",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "ITC_IMPG",
+        "db_column_name": "ITC_IMPG",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "ITC_IMPS",
+        "db_column_name": "ITC_IMPS",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "ITC_OTH",
+        "db_column_name": "ITC_OTH",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_LIAB",
+        "db_column_name": "TOT_LIAB",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "PAID_BY_CASH",
+        "db_column_name": "PAID_BY_CASH",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "PAID_BY_ITC",
+        "db_column_name": "PAID_BY_ITC",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "R3_1_C_NIL_EXEM_TAXABLE_AMT",
+        "db_column_name": "R3_1_C_NIL_EXEM_TAXABLE_AMT",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "R3_1_1_II_TAXABLE",
+        "db_column_name": "R3_1_1_II_TAXABLE",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "LIAB_TABLE_3_1_1_I",
+        "db_column_name": "LIAB_TABLE_3_1_1_I",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      }
+    ],
+    "target_table_columns": [
+      "GSTIN",
+      "ARN",
+      "FILING_DT",
+      "RTN_PRD",
+      "TAXABLE31_A",
+      "TAXABLE31_B",
+      "TAXABLE31_C",
+      "TAXABLE31_E",
+      "TAXABLE_TOVER",
+      "TOT_TOVER",
+      "LIAB_TABLE_3",
+      "ITC_IMPG",
+      "ITC_IMPS",
+      "ITC_OTH",
+      "TOT_LIAB",
+      "PAID_BY_CASH",
+      "PAID_BY_ITC",
+      "R3_1_C_NIL_EXEM_TAXABLE_AMT",
+      "R3_1_1_II_TAXABLE",
+      "LIAB_TABLE_3_1_1_I"
+    ]
+  },
+  {
+    "name": "FILDTLR1",
+    "format": "csv",
+    "delimiter": "|",
+    "extra_options" : "nullValue=\\N;mode=PERMISSIVE;header=false;multiline=true",
+    "schema": [
+      {
+        "name": "GSTIN",
+        "db_column_name": "GSTIN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "ARN",
+        "db_column_name": "ARN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "FILING_DT",
+        "db_column_name": "FILING_DT",
+        "dataType": {
+          "value": "date"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "RTN_PRD",
+        "db_column_name": "RTN_PRD",
+        "dataType": {
+          "value": "date"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "B2B_TAXABLE",
+        "db_column_name": "B2B_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "B2C_L_TAXABLE",
+        "db_column_name": "B2C_L_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "B2C_S_TAXABLE",
+        "db_column_name": "B2C_S_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "EXP_TAXABLE",
+        "db_column_name": "EXP_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "SEZ_TAXABLE",
+        "db_column_name": "SEZ_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "DE_TAXABLE",
+        "db_column_name": "DE_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "NIL_TAXABLE",
+        "db_column_name": "NIL_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "NGST_TAXABLE",
+        "db_column_name": "NGST_TAXABLE",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_TAX_TOVER",
+        "db_column_name": "TOT_TAX_TOVER",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_TOVER",
+        "db_column_name": "TOT_TOVER",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "rcm_taxable",
+        "db_column_name": "rcm_taxable",
+        "dataType": {
+          "value": "decimal(18,2)"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      }
+    ],
+    "target_table_columns": [
+      "GSTIN",
+      "ARN",
+      "FILING_DT",
+      "RTN_PRD",
+      "B2B_TAXABLE",
+      "B2C_L_TAXABLE",
+      "B2C_S_TAXABLE",
+      "EXP_TAXABLE",
+      "SEZ_TAXABLE",
+      "DE_TAXABLE",
+      "NIL_TAXABLE",
+      "NGST_TAXABLE",
+      "TOT_TAX_TOVER",
+      "TOT_TOVER",
+      "rcm_taxable"
+    ]
+  },
+  {
+    "name": "FILDTLR1CP",
+    "format": "csv",
+    "delimiter": "|",
+    "extra_options" : "nullValue=\\N;mode=PERMISSIVE;header=false;multiline=true",
+    "schema": [
+      {
+        "name": "GSTIN",
+        "db_column_name": "GSTIN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "RTIN",
+        "db_column_name": "RTIN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "RTN_PRD",
+        "db_column_name": "RTN_PRD",
+        "dataType": {
+          "value": "date"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_TXVAL",
+        "db_column_name": "TOT_TXVAL",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_IGST",
+        "db_column_name": "TOT_IGST",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_CGST",
+        "db_column_name": "TOT_CGST",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_SGST",
+        "db_column_name": "TOT_SGST",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TOT_CESS",
+        "db_column_name": "TOT_CESS",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "CATEGORY",
+        "db_column_name": "CATEGORY",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "FILING_MONTH",
+        "db_column_name": "FILING_MONTH",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      }
+    ],
+    "target_table_columns": [
+      "GSTIN",
+      "RTIN",
+      "RTN_PRD",
+      "TOT_TXVAL",
+      "TOT_IGST",
+      "TOT_CGST",
+      "TOT_SGST",
+      "TOT_CESS",
+      "CATEGORY",
+      "FILING_MONTH"
+    ]
+  },
+  {
+    "name": "FILDTLR1SP",
+    "format": "csv",
+    "delimiter": "|",
+    "extra_options" : "nullValue=\\N;mode=PERMISSIVE;header=false;multiline=true",
+    "schema": [
+      {
+        "name": "STIN",
+        "db_column_name": "STIN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "RTIN",
+        "db_column_name": "RTIN",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "RTN_PRD",
+        "db_column_name": "RTN_PRD",
+        "dataType": {
+          "value": "date"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "TAXABLE",
+        "db_column_name": "TAXABLE",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "CATEGORY",
+        "db_column_name": "CATEGORY",
+        "dataType": {
+          "value": "string"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      },
+      {
+        "name": "filing_month",
+        "db_column_name": "filing_month",
+        "dataType": {
+          "value": "integer"
+        },
+        "nullable": {
+          "value": "true"
+        }
+      }
+    ],
+    "target_table_columns": [
+      "STIN",
+      "RTIN",
+      "RTN_PRD",
+      "TAXABLE",
+      "CATEGORY",
+      "filing_month"
+    ]
+  }
+]

@@ -1,0 +1,751 @@
+{
+  "job_name": "INWARD-API",
+  "datasources": [
+    {
+      "name": "file_source",
+      "type": "file",
+      "file_path_config": {
+        "base_path": "",
+        "column_name_for_corrupted_records": "_corrupt_record",
+        "spark_file_path_column_name": "csv_file_path",
+        "number_of_partitions" : "5"
+      }
+    },
+    {
+      "name": "pg_source",
+      "type": "postgres",
+      "jdbc_config": {
+        "host": "localhost",
+        "port": "5432",
+        "user_name": "postgres",
+        "password": "root",
+        "db_name": "spark_scala_db",
+        "number_of_partitions" : "5"
+      }
+    },
+    {
+      "name": "td_source",
+      "type": "POSTGRES",
+      "jdbc_config": {
+        "host": "localhost",
+        "port": "5432",
+        "user_name": "postgres",
+        "password": "root",
+        "db_name": "spark_scala_db",
+        "number_of_partitions" : "5"
+      }
+    }
+  ],
+  "post_load_steps": [
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "INWARD-API/sql/01_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "GSTNDT","2","null"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/02_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "file_path",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "GSTNDT",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/03_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source",
+          "cache": true
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/04_not_found_csv.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "save_corrupted_data_in_spark_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/05_corrupted_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "to_be_processed_data",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/06_to_be_processed_data.sql",
+          "view_name": "to_be_processed",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "to_be_processed",
+          "data_source_file_schema": "GSTNDT",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "INWARD-API/sql/07_with_house_keeping_column.sql",
+          "data_source_target": "api_inward.GSTN_GST_REGN_DTL",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "save_data_in_spark_table_with_success_status",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/08_successfully_written_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/09_update_query_for_metadata.sql"
+        }
+      ]
+    },
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "INWARD-API/sql/01_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "GSTNMBR","2","null"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/02_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "file_path",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "GSTNMBR",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/03_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source",
+          "cache": true
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/04_not_found_csv.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "save_corrupted_data_in_spark_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/05_corrupted_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "to_be_processed_data",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/06_to_be_processed_data.sql",
+          "view_name": "to_be_processed",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "to_be_processed",
+          "data_source_file_schema": "GSTNMBR",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "INWARD-API/sql/07_with_house_keeping_column.sql",
+          "data_source_target": "api_inward.GSTN_KEY_PERSON_DTL",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "save_data_in_spark_table_with_success_status",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/08_successfully_written_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/09_update_query_for_metadata.sql"
+        }
+      ]
+    },
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "INWARD-API/sql/01_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "FILDTLR3B",
+        "2",
+        "null"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/02_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "file_path",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "FILDTLR3B",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/03_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source",
+          "cache": true
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/04_not_found_csv.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "save_corrupted_data_in_spark_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/05_corrupted_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "to_be_processed_data",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/06_to_be_processed_data.sql",
+          "view_name": "to_be_processed",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "to_be_processed",
+          "data_source_file_schema": "FILDTLR3B",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "INWARD-API/sql/07_with_house_keeping_column.sql",
+          "data_source_target": "api_inward.GSTN_GSTR_3B",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "save_data_in_spark_table_with_success_status",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/08_successfully_written_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/09_update_query_for_metadata.sql"
+        }
+      ]
+    },
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "INWARD-API/sql/01_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "FILDTLR1",
+        "2",
+        "null"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/02_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "file_path",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "FILDTLR1",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/03_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source",
+          "cache": true
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/04_not_found_csv.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "save_corrupted_data_in_spark_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/05_corrupted_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "to_be_processed_data",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/06_to_be_processed_data.sql",
+          "view_name": "to_be_processed",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "to_be_processed",
+          "data_source_file_schema": "FILDTLR1",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "INWARD-API/sql/07_with_house_keeping_column.sql",
+          "data_source_target": "api_inward.GSTN_GSTR_1",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "save_data_in_spark_table_with_success_status",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/08_successfully_written_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/09_update_query_for_metadata.sql"
+        }
+      ]
+    },
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "INWARD-API/sql/01_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "FILDTLR1CP",
+        "2",
+        "null"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/02_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "file_path",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "FILDTLR1CP",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/03_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source",
+          "cache": true
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/04_not_found_csv.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "save_corrupted_data_in_spark_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/05_corrupted_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "to_be_processed_data",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/06_to_be_processed_data.sql",
+          "view_name": "to_be_processed",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "to_be_processed",
+          "data_source_file_schema": "FILDTLR1CP",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "INWARD-API/sql/07_with_house_keeping_column.sql",
+          "data_source_target": "api_inward.GSTN_GSTR_B2B",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "save_data_in_spark_table_with_success_status",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/08_successfully_written_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/09_update_query_for_metadata.sql"
+        }
+      ]
+    },
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "INWARD-API/sql/01_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "FILDTLR1SP",
+        "2",
+        "null"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/02_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "file_path",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "FILDTLR1SP",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/03_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source",
+          "cache": true
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/04_not_found_csv.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "save_corrupted_data_in_spark_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/05_corrupted_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/pg_write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "to_be_processed_data",
+          "type": "make_view",
+          "sql_file_path": "INWARD-API/sql/06_to_be_processed_data.sql",
+          "view_name": "to_be_processed",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "to_be_processed",
+          "data_source_file_schema": "FILDTLR1SP",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "INWARD-API/sql/07_with_house_keeping_column.sql",
+          "data_source_target": "api_inward.GSTN_GSTR_1_PAN_TAN",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "save_data_in_spark_table_with_success_status",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/08_successfully_written_data.sql",
+          "data_source_target": "dep.gstn_returns_level_2_metadata_spark",
+          "exception_handling": {
+            "error_code": "1003",
+            "data_source_name": "pg_source",
+            "target_table_name": "dep.gstn_returns_level_2_metadata_spark",
+            "exception_handling_sql_path": "INWARD-API/exception_handling/write_issue.sql",
+            "update_metadata_query_path": "INWARD-API/exception_handling/update_meta_data_in_exception_handling.sql",
+            "source_view": "to_be_processed"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "INWARD-API/sql/09_update_query_for_metadata.sql"
+        }
+      ]
+    }
+  ]
+}

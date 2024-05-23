@@ -1,0 +1,741 @@
+{
+  "job_name": "SFT-016",
+  "datasources": [
+    {
+      "name": "file_source",
+      "type": "file",
+      "file_path_config": {
+        "base_path": "",
+        "column_name_for_corrupted_records": "_corrupt_record",
+        "spark_file_path_column_name": "csv_file_path",
+        "number_of_partitions": "5"
+      }
+    },
+    {
+      "name": "pg_source",
+      "type": "postgres",
+      "jdbc_config": {
+        "host": "localhost",
+        "port": "5432",
+        "user_name": "postgres",
+        "password": "root",
+        "db_name": "spark_scala_db",
+        "number_of_partitions": "5"
+      }
+    },
+    {
+      "name": "td_source",
+      "type": "POSTGRES",
+      "jdbc_config": {
+        "host": "localhost",
+        "port": "5432",
+        "user_name": "postgres",
+        "password": "root",
+        "db_name": "spark_scala_db",
+        "number_of_partitions": "5"
+      }
+    }
+  ],
+  "pre_load_steps": [
+    {
+      "name": "read_pan_master",
+      "type": "read_data_source",
+      "data_source_name": "pg_source",
+      "sql_file_path": "SFT-016/sql/01_pan_master.sql",
+      "view_name": "pan_master",
+      "cache": true
+    }
+  ],
+  "post_load_steps": [
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "SFT-016/sql/02_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "NB"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_to_get_original_meta_info_seq",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/03_original_meta_info_seq.sql",
+          "view_name": "original_meta_info_seq",
+          "cache": true
+        },
+        {
+          "name": "get_meta_seq_ids",
+          "type": "run_query_extract_data",
+          "source_view": "original_meta_info_seq",
+          "target_column": "current_meta_info_seq_id",
+          "data_point_name": "meta_seq_list"
+        },
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/04_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "dcrypt_file_name",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "sft-016",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/05_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source"
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/06_not_found_csv.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/06_not_found_csv.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "get_corrupted_data",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/07_corrupted_data.sql",
+          "view_name": "corrupted_data"
+        },
+        {
+          "name": "validate_data",
+          "type": "PERFORM_DATA_VALIDATIONS",
+          "sql_file_path": "SFT-016/sql/08_non_corrupted_data.sql",
+          "view_name": "validated_data",
+          "error_data_view_name": "validation_failed_data",
+          "data_source_file_schema": "sft-016"
+        },
+        {
+          "name": "union_all_error_df",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/10_unioned_error_data.sql",
+          "view_name": "unioned_error_data",
+          "cache": true
+        },
+        {
+          "name": "save_error_data_in_teradata",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "source_view": "unioned_error_data",
+          "data_source_target": "repoc_db.re_intrst_dvd_vldtn_err_log",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "save_error_data_in_postgres",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "source_view": "unioned_error_data",
+          "data_source_target": "report.re_intrst_dvd_vldtn_err_log",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "filter_validated_data_to_be_processed_further",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/11_validated_data_to_be_processed.sql",
+          "view_name": "validated_data_to_be_processed"
+        },
+        {
+          "name": "mark_valid_pan_and_valid_flag_columns",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/12_valid_columns_marked.sql",
+          "view_name": "valid_columns_marked",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "valid_columns_marked",
+          "data_source_file_schema": "sft-016",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "SFT-016/sql/13_with_house_keeping_columns.sql",
+          "data_source_target": "repoc_db.re_intrst_info_dtls",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "selected_columns"
+          }
+        },
+        {
+          "name": "save_error_data_in_temp_spark",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/14_error_data_for_spark_table.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "calculate_record_counts_from_target_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/15_record_counts.sql",
+          "view_name": "record_counts"
+        },
+        {
+          "name": "save_record_counts_in_spark_temp_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "source_view": "record_counts",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "record_counts"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/16_update_query_for_metadata.sql"
+        }
+      ]
+    },
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "SFT-016/sql/02_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "CB"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_to_get_original_meta_info_seq",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/03_original_meta_info_seq.sql",
+          "view_name": "original_meta_info_seq",
+          "cache": true
+        },
+        {
+          "name": "get_meta_seq_ids",
+          "type": "run_query_extract_data",
+          "source_view": "original_meta_info_seq",
+          "target_column": "current_meta_info_seq_id",
+          "data_point_name": "meta_seq_list"
+        },
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/04_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "dcrypt_file_name",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "sft-016",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/05_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source"
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/06_not_found_csv.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/06_not_found_csv.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "get_corrupted_data",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/07_corrupted_data.sql",
+          "view_name": "corrupted_data"
+        },
+        {
+          "name": "validate_data",
+          "type": "PERFORM_DATA_VALIDATIONS",
+          "sql_file_path": "SFT-016/sql/08_non_corrupted_data.sql",
+          "view_name": "validated_data",
+          "error_data_view_name": "validation_failed_data",
+          "data_source_file_schema": "sft-016"
+        },
+        {
+          "name": "read_re_intrst_info_dtls_table",
+          "type": "read_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "SFT-016/sql/09_1_re_intrest_info_dtls.sql",
+          "view_name": "re_intrest_info_dtls"
+        },
+        {
+          "name": "validate_cb_db_records",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/09_2_validated_cb_db_data.sql",
+          "view_name": "validated_cb_db_data"
+        },
+        {
+          "name": "union_all_error_df",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/10_1_unioned_error_data_for_cb_db.sql",
+          "view_name": "unioned_error_data",
+          "cache": true
+        },
+        {
+          "name": "save_error_data_in_teradata",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "source_view": "unioned_error_data",
+          "data_source_target": "repoc_db.re_intrst_dvd_vldtn_err_log",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "save_error_data_in_postgres",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "source_view": "unioned_error_data",
+          "data_source_target": "report.re_intrst_dvd_vldtn_err_log",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "filter_validated_data_to_be_processed_further",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/11_validated_data_to_be_processed.sql",
+          "view_name": "validated_data_to_be_processed"
+        },
+        {
+          "name": "mark_valid_pan_and_valid_flag_columns",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/12_valid_columns_marked.sql",
+          "view_name": "valid_columns_marked",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "valid_columns_marked",
+          "data_source_file_schema": "sft-016",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "SFT-016/sql/13_with_house_keeping_columns.sql",
+          "data_source_target": "repoc_db.re_intrst_info_dtls",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "selected_columns"
+          }
+        },
+        {
+          "name": "save_error_data_in_temp_spark",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/14_error_data_for_spark_table.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "save_data_in_metadata_with_DMI_tag",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/14_1_with_mark_invalid_flag.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/14_marking_dmi.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "get_data_to_be_marked_invalid",
+          "type": "RUN_DQL_QUERY",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/14_2_get_to_mark_invalid_list.sql",
+          "data_point_name": "to_mark_invalid_list"
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "UPDATE_TARGET_TABLE_TO_MARK_INVALID",
+          "type_of_query": "UPDATE",
+          "data_source_name": "td_source",
+          "data_point_name": "to_mark_invalid_list",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/14_marking_dmi.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "calculate_record_counts_from_target_table",
+          "type": "read_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "SFT-016/sql/15_record_counts.sql",
+          "view_name": "record_counts"
+        },
+        {
+          "name": "save_record_counts_in_spark_temp_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "source_view": "record_counts",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "record_counts"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/16_update_query_for_metadata.sql"
+        }
+      ]
+    },
+    {
+      "is_batch_job": true,
+      "max_files_per_batch": "20000",
+      "batch_query_target": "SFT-016/sql/02_calculate_batches.sql",
+      "data_source_name": "pg_source",
+      "positional_arguments": [
+        "DB"
+      ],
+      "execution_steps": [
+        {
+          "name": "read_metadata_to_get_original_meta_info_seq",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/03_original_meta_info_seq.sql",
+          "view_name": "original_meta_info_seq",
+          "cache": true
+        },
+        {
+          "name": "get_meta_seq_ids",
+          "type": "run_query_extract_data",
+          "source_view": "original_meta_info_seq",
+          "target_column": "current_meta_info_seq_id",
+          "data_point_name": "meta_seq_list"
+        },
+        {
+          "name": "read_metadata_table",
+          "type": "read_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/04_meta_data.sql",
+          "view_name": "meta_data"
+        },
+        {
+          "name": "get_file_names",
+          "type": "run_query_extract_data",
+          "source_view": "meta_data",
+          "target_column": "dcrypt_file_name",
+          "data_point_name": "files_list"
+        },
+        {
+          "name": "read_source_paths",
+          "type": "read_data_source",
+          "data_source_name": "file_source",
+          "data_point_name": "files_list",
+          "data_source_file_schema": "sft-016",
+          "view_name": "input_data"
+        },
+        {
+          "name": "join_meta_to_source",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/05_join_meta_to_source.sql",
+          "view_name": "joined_meta_to_source"
+        },
+        {
+          "name": "save_not_found_csv_data",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/06_not_found_csv.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/06_not_found_csv.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "get_corrupted_data",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/07_corrupted_data.sql",
+          "view_name": "corrupted_data"
+        },
+        {
+          "name": "validate_data",
+          "type": "PERFORM_DATA_VALIDATIONS",
+          "sql_file_path": "SFT-016/sql/08_non_corrupted_data.sql",
+          "view_name": "validated_data",
+          "error_data_view_name": "validation_failed_data",
+          "data_source_file_schema": "sft-016"
+        },
+        {
+          "name": "read_re_intrst_info_dtls_table",
+          "type": "read_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "SFT-016/sql/09_1_re_intrest_info_dtls.sql",
+          "view_name": "re_intrest_info_dtls"
+        },
+        {
+          "name": "validate_cb_db_records",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/09_2_validated_cb_db_data.sql",
+          "view_name": "validated_cb_db_data"
+        },
+        {
+          "name": "union_all_error_df",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/10_1_unioned_error_data_for_cb_db.sql",
+          "view_name": "unioned_error_data",
+          "cache": true
+        },
+        {
+          "name": "save_error_data_in_teradata",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "source_view": "unioned_error_data",
+          "data_source_target": "repoc_db.re_intrst_dvd_vldtn_err_log",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "save_error_data_in_postgres",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "source_view": "unioned_error_data",
+          "data_source_target": "report.re_intrst_dvd_vldtn_err_log",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "filter_validated_data_to_be_processed_further",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/11_validated_data_to_be_processed.sql",
+          "view_name": "validated_data_to_be_processed"
+        },
+        {
+          "name": "mark_valid_pan_and_valid_flag_columns",
+          "type": "make_view",
+          "sql_file_path": "SFT-016/sql/12_valid_columns_marked.sql",
+          "view_name": "valid_columns_marked",
+          "cache": true
+        },
+        {
+          "name": "select_all_columns_for_td",
+          "type": "format_columns_for_target",
+          "source_view": "valid_columns_marked",
+          "data_source_file_schema": "sft-016",
+          "view_name": "selected_columns"
+        },
+        {
+          "name": "save_data_in_target_table",
+          "type": "write_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "SFT-016/sql/13_with_house_keeping_columns.sql",
+          "data_source_target": "repoc_db.re_intrst_info_dtls",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "selected_columns"
+          }
+        },
+        {
+          "name": "save_error_data_in_temp_spark",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/14_error_data_for_spark_table.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "unioned_error_data"
+          }
+        },
+        {
+          "name": "save_data_in_metadata_with_DMI_tag",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/14_1_with_mark_invalid_flag.sql",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/14_marking_dmi.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "get_data_to_be_marked_invalid",
+          "type": "RUN_DQL_QUERY",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/14_2_get_to_mark_invalid_list.sql",
+          "data_point_name": "to_mark_invalid_list"
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "UPDATE_TARGET_TABLE_TO_MARK_INVALID",
+          "type_of_query": "UPDATE",
+          "data_source_name": "td_source",
+          "data_point_name": "to_mark_invalid_list",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/14_marking_dmi.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql"
+          }
+        },
+        {
+          "name": "calculate_record_counts_from_target_table",
+          "type": "read_data_source",
+          "data_source_name": "td_source",
+          "sql_file_path": "SFT-016/sql/15_record_counts.sql",
+          "view_name": "record_counts"
+        },
+        {
+          "name": "save_record_counts_in_spark_temp_table",
+          "type": "write_data_source",
+          "data_source_name": "pg_source",
+          "source_view": "record_counts",
+          "data_source_target": "report.re_intrst_info_dtls_temp_spark",
+          "exception_handling": {
+            "error_code": "",
+            "data_source_name": "pg_source",
+            "target_table_name": "report.re_intrst_info_dtls_temp_spark",
+            "exception_handling_sql_path": "SFT-016/exception_handling/10_write_error_data.sql",
+            "update_metadata_query_path": "SFT-016/exception_handling/17_update_meta_data_in_exception_handling.sql",
+            "source_view": "record_counts"
+          }
+        },
+        {
+          "name": "update_meta_data_table",
+          "type": "run_dml_query",
+          "type_of_query": "UPDATE",
+          "data_source_name": "pg_source",
+          "sql_file_path": "SFT-016/sql/16_update_query_for_metadata.sql"
+        }
+      ]
+    }
+  ]
+}

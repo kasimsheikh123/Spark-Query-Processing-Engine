@@ -1,0 +1,261 @@
+[
+  {
+    "name": "sft-016",
+    "format": "csv",
+    "delimiter": "|",
+    "extra_options" : "header=true;multiline=true;ignoreLeadingWhiteSpace=true;ignoreTrailingWhiteSpace=true",
+    "schema": [
+      {
+        "name": "rsn",
+        "db_column_name": "rsn",
+        "dataType": {
+          "value": "integer",
+          "error_code": "23"
+        },
+        "nullable": {
+          "value": "false",
+          "error_code": "21"
+        },
+        "max_length": {
+          "value": "10",
+          "error_code": "22"
+        },
+        "is_not_exponential": {
+          "value": "true",
+          "error_code": "24"
+        }
+      },
+      {
+        "name": "FY",
+        "db_column_name": "fin_year_id",
+        "dataType": {
+          "value": "integer",
+          "error_code": "27"
+        },
+        "nullable": {
+          "value": "false",
+          "error_code": "102"
+        },
+        "min_length": {
+          "value": "4",
+          "error_code": "26"
+        },
+        "equal_column": {
+          "value": "fin_year_id",
+          "error_code": "28"
+        }
+      },
+      {
+        "name": "Name",
+        "db_column_name": "name",
+        "dataType": {
+          "value": "string",
+          "error_code": ""
+        },
+        "nullable": {
+          "value": "false",
+          "error_code": "29"
+        },
+        "max_length": {
+          "value": "150",
+          "error_code": "30"
+        }
+      },
+      {
+        "name": "PAN",
+        "db_column_name": "pan",
+        "dataType": {
+          "value": "string",
+          "error_code": ""
+        },
+        "nullable": {
+          "value": "false",
+          "error_code": "103"
+        },
+        "min_length": {
+          "value": "10",
+          "error_code": "31"
+        }
+      },
+      {
+        "name": "Aadhaar",
+        "db_column_name": "adhar_num",
+        "dataType": {
+          "value": "string",
+          "error_code": ""
+        },
+        "nullable": {
+          "value": "true",
+          "error_code": ""
+        },
+        "max_length": {
+          "value": "15",
+          "error_code": "38"
+        },
+        "is_not_exponential": {
+          "value": "true",
+          "error_code": "39"
+        }
+      },
+      {
+        "name": "Mobile",
+        "db_column_name": "mobile_no",
+        "dataType": {
+          "value": "string",
+          "error_code": ""
+        },
+        "nullable": {
+          "value": "true",
+          "error_code": ""
+        },
+        "max_length": {
+          "value": "20",
+          "error_code": "41"
+        },
+        "is_not_exponential": {
+          "value": "true",
+          "error_code": "42"
+        }
+      },
+      {
+        "name": "Email",
+        "db_column_name": "email_id",
+        "dataType": {
+          "value": "string",
+          "error_code": ""
+        },
+        "nullable": {
+          "value": "true",
+          "error_code": ""
+        },
+        "max_length": {
+          "value": "100",
+          "error_code": "40"
+        }
+      },
+      {
+        "name": "Account Number",
+        "db_column_name": "acnt_num",
+        "dataType": {
+          "value": "string",
+          "error_code": ""
+        },
+        "nullable": {
+          "value": "false",
+          "error_code": "32"
+        },
+        "max_length": {
+          "value": "20",
+          "error_code": "33"
+        },
+        "is_not_exponential": {
+          "value": "true",
+          "error_code": "34"
+        }
+      },
+      {
+        "name": "Type of Account",
+        "db_column_name": "acnt_type",
+        "dataType": {
+          "value": "string",
+          "error_code": ""
+        },
+        "nullable": {
+          "value": "false",
+          "error_code": "35"
+        },
+        "max_length": {
+          "value": "1",
+          "error_code": "36"
+        },
+        "values_list": {
+          "value": [
+            "S",
+            "T",
+            "R",
+            "O",
+            "s",
+            "t",
+            "r",
+            "o"
+          ],
+          "error_code": "37"
+        }
+      },
+      {
+        "name": "Interest",
+        "db_column_name": "intrst_amount",
+        "dataType": {
+          "value": "integer",
+          "error_code": "44"
+        },
+        "nullable": {
+          "value": "false",
+          "error_code": "43"
+        },
+        "is_not_exponential": {
+          "value": "true",
+          "error_code": "46"
+        },
+        "max_length": {
+          "value": "15",
+          "error_code": "45"
+        }
+      }
+    ],
+    "duplicate_reports_check": [
+      {
+        "type_of_uniqueness": "unique_rsn_check_columns",
+        "order_by_column": "meta_info_seq_id",
+        "unique_check_columns": [
+          "meta_info_seq_id",
+          "RSN"
+        ],
+        "error_code": "25"
+      },
+      {
+        "type_of_uniqueness": "unique_pan_check_columns",
+        "order_by_column": "meta_info_seq_id",
+        "unique_check_columns": [
+          "meta_info_seq_id",
+          "PAN",
+          "Type of Account",
+          "Account Number"
+        ],
+        "error_code": "47"
+      },
+      {
+        "type_of_uniqueness": "unique_all_columns_check",
+        "order_by_column": "meta_info_seq_id",
+        "unique_check_columns": [
+          "meta_info_seq_id",
+          "FY",
+          "Name",
+          "PAN",
+          "Aadhaar",
+          "Mobile",
+          "Email",
+          "Account Number",
+          "Type of Account",
+          "Interest"
+        ],
+        "error_code": "48"
+      }
+    ],
+    "target_table_columns": [
+      "meta_info_seq_id",
+      "rsn",
+      "fin_year_id",
+      "name",
+      "pan",
+      "adhar_num",
+      "mobile_no",
+      "email_id",
+      "acnt_num",
+      "acnt_type",
+      "intrst_amount",
+      "valid_pan_flag",
+      "status_flag"
+    ]
+  }
+]
